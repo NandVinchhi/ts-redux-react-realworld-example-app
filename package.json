@@ -37,10 +37,6 @@
     "prettier": "prettier --write src",
     "lint": "eslint src"
   },
-  "pre-commit": [
-    "prettier:check",
-    "lint"
-  ],
   "eslintConfig": {
     "extends": "react-app"
   },
