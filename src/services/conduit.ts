@@ -25,17 +25,24 @@ export async function getArticles(filters: ArticlesFilters = {}): Promise<Multip
     offset: 0,
     ...filters,
   };
-  return guard(multipleArticlesDecoder)((await axios.get(`articles?${objectToQueryString(finalFilters)}`)).data);
-}
 
+  const response = await axios.get(`articles?${objectToQueryString(finalFilters)}`);
+  return guard(multipleArticlesDecoder)(response.data);
+}
 export async function getTags(): Promise<{ tags: string[] }> {
-  return guard(object({ tags: array(string) }))((await axios.get('tags')).data);
+  const response = await axios.get('tags');
+  const { data } = response;
+
+  const transformedData = {
+    tags: data.tags.map((t: { id: number; tag: string }) => t.tag)
+  };
+
+  return guard(object({ tags: array(string) }))(transformedData);
 }
 
 export async function login(email: string, password: string): Promise<Result<User, GenericErrors>> {
   try {
     const { data } = await axios.post('users/login', { user: { email, password } });
-
     return Ok(guard(object({ user: userDecoder }))(data).user);
   } catch ({ response: { data } }) {
     return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
@@ -57,11 +64,14 @@ export async function unfavoriteArticle(slug: string): Promise<Article> {
 
 export async function updateSettings(user: UserSettings): Promise<Result<User, GenericErrors>> {
   try {
-    const { data } = await axios.put('user', user);
+    const { data } = await axios.put('user', { user });
 
     return Ok(guard(object({ user: userDecoder }))(data).user);
-  } catch ({ data }) {
-    return Err(guard(object({ errors: genericErrorsDecoder }))(data).errors);
+  } catch (error: any) {
+    if (error.response?.data) {
+      return Err(guard(object({ errors: genericErrorsDecoder }))(error.response.data).errors);
+    }
+    return Err({ '': ['An unexpected error occurred'] });
   }
 }
 
@@ -87,6 +97,7 @@ export async function createArticle(article: ArticleForEditor): Promise<Result<A
 
 export async function getArticle(slug: string): Promise<Article> {
   const { data } = await axios.get(`articles/${slug}`);
+
   return guard(object({ article: articleDecoder }))(data).article;
 }
 
@@ -121,7 +132,8 @@ export async function getFeed(filters: FeedFilters = {}): Promise<MultipleArticl
     offset: 0,
     ...filters,
   };
-  return guard(multipleArticlesDecoder)((await axios.get(`articles/feed?${objectToQueryString(finalFilters)}`)).data);
+  const response = await axios.get(`articles/feed?${objectToQueryString(finalFilters)}`);
+  return guard(multipleArticlesDecoder)(response.data);
 }
 
 export async function getArticleComments(slug: string): Promise<Comment[]> {

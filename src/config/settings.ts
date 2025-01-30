@@ -1,3 +1,3 @@
 export default {
-  baseApiUrl: 'https://api.realworld.io/api/',
+  baseApiUrl: ' https://ae66-50-175-245-62.ngrok-free.app/api/',
 };
